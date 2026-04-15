@@ -4,7 +4,7 @@
  * Get token: Invoke-RestMethod http://localhost:3001/api/auth/dev-login
  *
  * API prefix reference:
- *   /auth/v1/            → personal user data (bookmarks, collections, goals, streaks)
+ *   /auth/v1/            → personal user data (bookmarks, collections, goals, streaks, notes)
  *   /quran-reflect/v1/   → rooms, posts, comments (QuranReflect content)
  *   /content/api/v4/     → Quran content (verses, translations)
  */
@@ -57,11 +57,11 @@ const REFLECTIONS = [
 ];
 
 const SESSIONS = [
-  { chapterNumber: 1,  endVerse: 7,  label: '5 days ago' },
-  { chapterNumber: 2,  endVerse: 20, label: '4 days ago' },
-  { chapterNumber: 2,  endVerse: 40, label: '3 days ago' },
-  { chapterNumber: 2,  endVerse: 60, label: '2 days ago' },
-  { chapterNumber: 2,  endVerse: 80, label: 'yesterday'  },
+  { chapterNumber: 1, endVerse: 7,  label: '5 days ago' },
+  { chapterNumber: 2, endVerse: 20, label: '4 days ago' },
+  { chapterNumber: 2, endVerse: 40, label: '3 days ago' },
+  { chapterNumber: 2, endVerse: 60, label: '2 days ago' },
+  { chapterNumber: 2, endVerse: 80, label: 'yesterday'  },
 ];
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -71,7 +71,7 @@ async function seed() {
   console.log(`  Base URL  : ${BASE}`);
   console.log(`  JWT       : ${JWT.slice(0, 30)}...\n`);
 
-  // ── STEP 1 — Create circle (/quran-reflect/v1/rooms/groups) ────────────
+  // ── STEP 1 — Create circle ─────────────────────────────────────────────
   console.log('  ─── STEP 1 — Creating circle');
   const circleRes = await call('POST', '/rooms/create', {
     name:        'Al-Noor Family Circle',
@@ -82,12 +82,14 @@ async function seed() {
 
   const roomId = circleRes?.id ?? circleRes?.data?.id ?? null;
   if (!roomId) {
-    console.log('  ⚠️   Could not extract room ID. Continuing with remaining steps...\n');
+    console.log('  ⚠️   Could not extract room ID. Continuing...\n');
   } else {
     console.log(`  ℹ️   Room ID: ${roomId}\n`);
   }
 
   // ── STEP 2 — Create Khatm goal ─────────────────────────────────────────
+  // POST /auth/v1/goals?mushafId=4
+  // Body: { type: 'QURAN_PAGES', amount: pages, duration: days, category: 'QURAN' }
   console.log('  ─── STEP 2 — Creating Khatm goal (30 Juz / 60 days)');
   if (roomId) {
     await call('POST', '/goals/khatm/create', {
@@ -105,7 +107,7 @@ async function seed() {
     await call('POST', '/proxy/quran-reflect/v1/posts', {
       post: {
         body:           r.body,
-        roomPostStatus: 1,
+        roomPostStatus: 2,
         draft:          false,
         references:     [{ chapterId, from: verseNumber, to: verseNumber }],
         mentions:       [],
@@ -119,8 +121,8 @@ async function seed() {
 
   // ── STEP 4 — Collections (/auth/v1/collections ✅) ─────────────────────
   console.log('  ─── STEP 4 — Creating collections');
-  const col1Res = await call('POST', '/proxy/auth/v1/collections', { name: 'Verses of Comfort' },  "Collection 'Verses of Comfort' created");
-  const col2Res = await call('POST', '/proxy/auth/v1/collections', { name: 'Friday Reminders' },    "Collection 'Friday Reminders' created");
+  const col1Res = await call('POST', '/proxy/auth/v1/collections', { name: 'Verses of Comfort' }, "Collection 'Verses of Comfort' created");
+  const col2Res = await call('POST', '/proxy/auth/v1/collections', { name: 'Friday Reminders' },   "Collection 'Friday Reminders' created");
 
   const col1Id = col1Res?.data?.id ?? col1Res?.id ?? null;
   const col2Id = col2Res?.data?.id ?? col2Res?.id ?? null;

@@ -2,18 +2,16 @@
  * Halaqa Demo Seed Script
  * Usage: node scripts/seed.js <jwt_token>
  * Get token: Invoke-RestMethod http://localhost:3001/api/auth/dev-login
- *
- * API prefix reference:
- *   /auth/v1/            → personal user data (bookmarks, collections, goals, streaks, notes)
- *   /quran-reflect/v1/   → rooms, posts, comments (QuranReflect content)
- *   /content/api/v4/     → Quran content (verses, translations)
  */
 
 require('dotenv').config();
 const axios = require('axios');
 
-const JWT  = process.argv[2];
-const BASE = 'http://localhost:3001/api';
+const JWT     = process.argv[2];
+const BASE    = 'http://localhost:3001/api';
+const DELAY   = 1500;   // ms between calls
+const TIMEOUT = 30000;  // ms per request
+const RETRIES = 2;      // retries on timeout
 
 if (!JWT) {
   console.error('\n  ❌  Usage: node scripts/seed.js <jwt_token>\n');
@@ -23,19 +21,35 @@ if (!JWT) {
 const client = axios.create({
   baseURL: BASE,
   headers: { Authorization: `Bearer ${JWT}`, 'Content-Type': 'application/json' },
+  timeout: TIMEOUT,
 });
 
-// ── Helper ────────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 const call = async (method, url, data, label) => {
-  try {
-    const res = await client({ method, url, data });
-    console.log(`  ✅  ${label}`);
-    return res.data;
-  } catch (err) {
-    const status = err.response?.status ?? '???';
-    const body   = JSON.stringify(err.response?.data ?? err.message);
-    console.log(`  ⚠️   ${label} — HTTP ${status}: ${body}`);
-    return err.response?.data ?? null;
+  await sleep(DELAY);
+
+  for (let attempt = 1; attempt <= RETRIES + 1; attempt++) {
+    try {
+      const res = await client({ method, url, data });
+      console.log(`  ✅  ${label}`);
+      return res.data;
+    } catch (err) {
+      const isTimeout = err.code === 'ECONNABORTED' || err.message?.includes('timeout');
+      const isReset   = err.code === 'ECONNRESET';
+      const status    = err.response?.status;
+
+      if ((isTimeout || isReset) && attempt <= RETRIES) {
+        console.log(`  ⏳  ${label} — retrying (${attempt}/${RETRIES})...`);
+        await sleep(DELAY * attempt); // exponential back-off
+        continue;
+      }
+
+      const body = JSON.stringify(err.response?.data ?? err.message);
+      console.log(`  ⚠️   ${label} — HTTP ${status ?? '???'}: ${body}`);
+      return err.response?.data ?? null;
+    }
   }
 };
 
@@ -46,14 +60,14 @@ const parseKey = (verseKey) => {
 
 // ── Seed data ─────────────────────────────────────────────────────────────────
 const REFLECTIONS = [
-  { verseKey: '2:255', body: "This verse reminds me that Allah's protection encompasses everything. Ayatul Kursi is not just a recitation — it is a declaration that nothing exists, moves, or breathes except by His permission. Reading it before sleep completely changed how I understand safety." },
-  { verseKey: '1:1',   body: "Starting each day with Bismillah changes how I approach every task. It is not a ritual phrase — it is a conscious decision to begin everything in the name of the Most Merciful. I have started saying it before even opening my laptop." },
-  { verseKey: '3:200', body: "Patience is not passive — it requires active effort and commitment. This verse says: be patient, and compete in patience. There is a rank to it. It is not just waiting — it is striving while you wait. That distinction changed everything for me." },
-  { verseKey: '18:10', body: "Like the People of the Cave, sometimes retreating from the world is wisdom. They did not flee out of weakness — they fled to protect their faith. There are moments when stepping back from noise is the bravest thing a person can do." },
-  { verseKey: '93:3',  body: "Your Lord has not forsaken you — this came at a moment I needed it most. It was revealed when the Prophet (PBUH) felt abandoned, and it reaches across fourteen centuries to say the same thing to me today. SubhanAllah." },
-  { verseKey: '2:286', body: "Allah does not burden a soul beyond its capacity — I return to this weekly. Whenever I feel overwhelmed, this verse does not just comfort me — it reminds me that the weight I carry is exactly the weight I was built to carry." },
-  { verseKey: '13:28', body: "Hearts find rest in the remembrance of Allah. I felt this during Fajr today. Not a philosophical statement — a physiological one. Something in the chest genuinely settles when you say His name. I cannot explain it. I just experience it." },
-  { verseKey: '55:13', body: "Which of the favours of your Lord will you deny? A question worth sitting with every single day. Allah repeats it 31 times in this Surah — not because He forgot, but because we forget. The repetition is mercy, not redundancy." },
+  { verseKey: '2:255', body: "Ayatul Kursi is not just a recitation — it is a declaration that nothing exists, moves, or breathes except by His permission. Reading it before sleep completely changed how I understand safety." },
+  { verseKey: '1:1',   body: "Starting each day with Bismillah changes how I approach every task. It is not a ritual phrase — it is a conscious decision to begin everything in the name of the Most Merciful." },
+  { verseKey: '3:200', body: "Patience is not passive. This verse says: be patient, and compete in patience. There is a rank to it. It is not just waiting — it is striving while you wait." },
+  { verseKey: '18:10', body: "Like the People of the Cave, sometimes retreating from the world is wisdom. They fled to protect their faith. Stepping back from noise is sometimes the bravest thing a person can do." },
+  { verseKey: '93:3',  body: "Your Lord has not forsaken you. It was revealed when the Prophet felt abandoned, and it reaches across fourteen centuries to say the same thing to me today. SubhanAllah." },
+  { verseKey: '2:286', body: "Allah does not burden a soul beyond its capacity. Whenever I feel overwhelmed, this reminds me that the weight I carry is exactly the weight I was built to carry." },
+  { verseKey: '13:28', body: "Hearts find rest in the remembrance of Allah. Something in the chest genuinely settles when you say His name. I cannot explain it. I just experience it." },
+  { verseKey: '55:13', body: "Which of the favours of your Lord will you deny? Allah repeats it 31 times — not because He forgot, but because we forget. The repetition is mercy, not redundancy." },
 ];
 
 const SESSIONS = [
@@ -69,6 +83,7 @@ async function seed() {
   console.log('\n  🌱  Halaqa Demo Seed Script (pre-live)');
   console.log('  ────────────────────────────────────────────');
   console.log(`  Base URL  : ${BASE}`);
+  console.log(`  Delay     : ${DELAY}ms | Timeout: ${TIMEOUT}ms | Retries: ${RETRIES}`);
   console.log(`  JWT       : ${JWT.slice(0, 30)}...\n`);
 
   // ── STEP 1 — Create circle ─────────────────────────────────────────────
@@ -81,26 +96,21 @@ async function seed() {
   }, "Circle 'Al-Noor Family Circle' created");
 
   const roomId = circleRes?.id ?? circleRes?.data?.id ?? null;
-  if (!roomId) {
-    console.log('  ⚠️   Could not extract room ID. Continuing...\n');
-  } else {
-    console.log(`  ℹ️   Room ID: ${roomId}\n`);
-  }
+  if (!roomId) console.log('  ⚠️   Could not extract room ID. Continuing...\n');
+  else         console.log(`  ℹ️   Room ID: ${roomId}\n`);
 
-  // ── STEP 2 — Create Khatm goal ─────────────────────────────────────────
-  // POST /auth/v1/goals?mushafId=4
-  // Body: { type: 'QURAN_PAGES', amount: pages, duration: days, category: 'QURAN' }
+  // ── STEP 2 — Khatm goal ────────────────────────────────────────────────
   console.log('  ─── STEP 2 — Creating Khatm goal (30 Juz / 60 days)');
   if (roomId) {
     await call('POST', '/goals/khatm/create', {
       roomId, targetJuzCount: 30, deadlineDays: 60,
     }, 'Khatm goal created: 30 Juz in 60 days');
   } else {
-    console.log('  ⏭️   Skipping — no room ID available');
+    console.log('  ⏭️   Skipping — no room ID');
   }
   console.log();
 
-  // ── STEP 3 — Post reflections (/quran-reflect/v1/posts) ───────────────
+  // ── STEP 3 — Reflections ───────────────────────────────────────────────
   console.log('  ─── STEP 3 — Posting 8 reflections');
   for (const r of REFLECTIONS) {
     const { chapterId, verseNumber } = parseKey(r.verseKey);
@@ -119,7 +129,7 @@ async function seed() {
   }
   console.log();
 
-  // ── STEP 4 — Collections (/auth/v1/collections ✅) ─────────────────────
+  // ── STEP 4 — Collections ───────────────────────────────────────────────
   console.log('  ─── STEP 4 — Creating collections');
   const col1Res = await call('POST', '/proxy/auth/v1/collections', { name: 'Verses of Comfort' }, "Collection 'Verses of Comfort' created");
   const col2Res = await call('POST', '/proxy/auth/v1/collections', { name: 'Friday Reminders' },   "Collection 'Friday Reminders' created");
@@ -145,7 +155,7 @@ async function seed() {
   }
   console.log();
 
-  // ── STEP 5 — Reading sessions (/auth/v1/reading-sessions ✅) ───────────
+  // ── STEP 5 — Reading sessions ──────────────────────────────────────────
   console.log('  ─── STEP 5 — Logging 5 reading sessions');
   for (const s of SESSIONS) {
     await call('POST', '/proxy/auth/v1/reading-sessions', {
@@ -155,7 +165,7 @@ async function seed() {
   }
   console.log();
 
-  // ── STEP 6 — Bookmarks (/auth/v1/bookmarks ✅) ─────────────────────────
+  // ── STEP 6 — Bookmarks ─────────────────────────────────────────────────
   console.log('  ─── STEP 6 — Bookmarking 3 key verses');
   for (const vk of ['2:255', '13:28', '93:3']) {
     const { chapterId, verseNumber } = parseKey(vk);
@@ -170,11 +180,11 @@ async function seed() {
   console.log('  What was seeded:');
   console.log('    • 1 family circle  — Al-Noor Family Circle');
   console.log('    • 1 Khatm goal    — 30 Juz in 60 days');
-  console.log('    • 8 reflections   — spread across key verses');
+  console.log('    • 8 reflections   — across key verses');
   console.log('    • 2 collections   — Verses of Comfort, Friday Reminders');
   console.log('    • 5 verses        — added to collections');
   console.log('    • 5 reading sessions');
-  console.log('    • 3 bookmarks     — key verses bookmarked');
+  console.log('    • 3 bookmarks');
   console.log('\n  ➜  Open http://localhost:5173/dashboard to see the data.\n');
 }
 

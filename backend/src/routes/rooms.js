@@ -18,7 +18,6 @@ const getUserToken = async (userId) => {
 };
 
 // ── POST /api/rooms/create ────────────────────────────────────────────────────
-// Rooms are QuranReflect rooms → /quran-reflect/v1/rooms/groups
 router.post('/create', authenticate, async (req, res) => {
   const { name, description, type, url } = req.body;
   try {
@@ -29,10 +28,24 @@ router.post('/create', authenticate, async (req, res) => {
       { headers: qfHeaders(access_token) }
     );
     const room = qfRes.data?.data ?? qfRes.data;
+
+    // Cache in local DB — this is the fallback when QF API is unreachable
     await pool.query(
-      `INSERT INTO circle_membership (user_id, room_id, role) VALUES ($1, $2, 'admin') ON CONFLICT DO NOTHING`,
-      [req.userId, String(room.id)]
+      `INSERT INTO circle_membership (user_id, room_id, role, room_name, room_description, room_type, room_public)
+       VALUES ($1, $2, 'admin', $3, $4, $5, $6)
+       ON CONFLICT (user_id, room_id) DO UPDATE
+         SET room_name = EXCLUDED.room_name,
+             room_description = EXCLUDED.room_description`,
+      [
+        req.userId,
+        String(room.id),
+        name,
+        description || '',
+        'GROUP',
+        type !== 'family',
+      ]
     );
+
     return res.status(201).json(room);
   } catch (err) {
     if (err.response) return res.status(err.response.status).json(err.response.data);
@@ -42,18 +55,48 @@ router.post('/create', authenticate, async (req, res) => {
 });
 
 // ── GET /api/rooms/my ─────────────────────────────────────────────────────────
+// Try QF API first. If unreachable, fall back to local DB cache.
 router.get('/my', authenticate, async (req, res) => {
+  // Always try local DB first as primary cache
+  const localRooms = await pool.query(
+    `SELECT room_id as id, room_name as name, room_description as description,
+            room_type as "roomType", room_public as public, role, joined_at
+     FROM circle_membership
+     WHERE user_id = $1
+     ORDER BY joined_at DESC`,
+    [req.userId]
+  );
+
   try {
     const access_token = await getUserToken(req.userId);
     const qfRes = await axios.get(
       `${process.env.QURAN_API_BASE}/quran-reflect/v1/rooms`,
-      { headers: qfHeaders(access_token) }
+      { headers: qfHeaders(access_token), timeout: 8000 }
     );
-    return res.json(qfRes.data);
+    const qfData = qfRes.data;
+
+    // Merge QF data into local DB for future fallback
+    const qfRooms = Array.isArray(qfData) ? qfData : (qfData?.data ?? []);
+    for (const room of qfRooms) {
+      await pool.query(
+        `INSERT INTO circle_membership (user_id, room_id, role, room_name, room_description, room_type, room_public)
+         VALUES ($1, $2, 'member', $3, $4, $5, $6)
+         ON CONFLICT (user_id, room_id) DO UPDATE
+           SET room_name        = COALESCE(EXCLUDED.room_name, circle_membership.room_name),
+               room_description = COALESCE(EXCLUDED.room_description, circle_membership.room_description)`,
+        [req.userId, String(room.id), room.name || '', room.description || '', room.roomType || 'GROUP', room.public ?? true]
+      ).catch(() => {}); // silently skip cache write errors
+    }
+
+    return res.json(qfData);
   } catch (err) {
-    if (err.response) return res.status(err.response.status).json(err.response.data);
+    // QF API unreachable — serve from local DB cache
     console.error('[Rooms /my Error]', err.message);
-    return res.status(500).json({ error: 'Failed to fetch rooms' });
+    if (localRooms.rows.length > 0) {
+      console.log(`[Rooms /my] Serving ${localRooms.rows.length} room(s) from local cache`);
+      return res.json({ data: localRooms.rows });
+    }
+    return res.status(503).json({ error: 'Unable to fetch rooms', data: [] });
   }
 });
 
@@ -64,13 +107,15 @@ router.get('/:roomId/members', authenticate, async (req, res) => {
     const access_token = await getUserToken(req.userId);
     const qfRes = await axios.get(
       `${process.env.QURAN_API_BASE}/quran-reflect/v1/rooms/${roomId}/members`,
-      { headers: qfHeaders(access_token) }
+      { headers: qfHeaders(access_token), timeout: 8000 }
     );
     return res.json(qfRes.data);
   } catch (err) {
     if (err.response) return res.status(err.response.status).json(err.response.data);
     console.error('[Rooms /members Error]', err.message);
-    return res.status(500).json({ error: 'Failed to fetch members' });
+    // Return at least the current user as a member
+    const user = await pool.query('SELECT id, username, email FROM users WHERE id = $1', [req.userId]);
+    return res.json({ data: user.rows.map(u => ({ ...u, role: 'admin' })) });
   }
 });
 

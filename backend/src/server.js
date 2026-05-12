@@ -1,21 +1,21 @@
 require('dotenv').config();
 
 const express = require('express');
-const cors    = require('cors');
-const helmet  = require('helmet');
-const http    = require('http');
+const cors = require('cors');
+const helmet = require('helmet');
+const http = require('http');
 const { Server } = require('socket.io');
 
 // Routes
-const authRoutes  = require('./routes/auth');
+const authRoutes = require('./routes/auth');
 const proxyRoutes = require('./routes/proxy');
-const roomRoutes  = require('./routes/rooms');
-const goalRoutes  = require('./routes/goals');
+const roomRoutes = require('./routes/rooms');
+const goalRoutes = require('./routes/goals');
 
 // Socket
 const { initSocket } = require('./sockets/sessionSocket');
 
-const app  = express();
+const app = express();
 const server = http.createServer(app);
 
 // ── Socket.io ────────────────────────────────────────────────────────────────
@@ -37,10 +37,18 @@ app.use(cors({
 app.use(express.json());
 
 // ── Routes ────────────────────────────────────────────────────────────────────
-app.use('/api/auth',  authRoutes);
+app.use('/api/auth', authRoutes);
 app.use('/api/proxy', proxyRoutes);
 app.use('/api/rooms', roomRoutes);
 app.use('/api/goals', goalRoutes);
+// ── Health / Root ─────────────────────────────────────────────────────────────
+app.get('/', (req, res) => {
+  res.json({ service: "Halaqa Backend API", status: "live", version: "1.0.0" });
+});
+
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', message: 'Halaqa API is running', timestamp: new Date().toISOString() });
+});
 
 // ── Global Error Handler ──────────────────────────────────────────────────────
 app.use((err, req, res, next) => {

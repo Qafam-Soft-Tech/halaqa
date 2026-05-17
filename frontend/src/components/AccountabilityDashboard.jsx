@@ -89,7 +89,7 @@ const AccountabilityDashboard = ({ roomId }) => {
 
   const { data: goalData, isLoading: goalLoading } = useQuery({
     queryKey: ['today-goal'],
-    queryFn:  () => fetchSafe('/goals/today'),
+    queryFn:  () => fetchSafe('/proxy/auth/v1/goals/today'),
   });
 
   const isLoading = membersLoading || streakLoading || activityLoading || goalLoading;

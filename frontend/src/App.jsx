@@ -1,17 +1,33 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// App.jsx
+// Root router. Changes from the previous version:
+//   • Imports MyCircles (extracted from old Dashboard) and new Explore, Settings
+//   • /circles → MyCircles  (was: Dashboard)
+//   • /explore → Explore    (was: blank — route did not exist)
+//   • /settings → Settings  (was: blank — route did not exist)
+//   • /dashboard → Dashboard (now: stats home page, not the circles list)
+// Everything else — auth flow, CircleRoom, KhatmPlanner, TafsirSession — is
+// completely unchanged.
+// ─────────────────────────────────────────────────────────────────────────────
+
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { AuthProvider } from '@/context/AuthContext';
-import AuthCallback from '@/pages/AuthCallback';
-import ProtectedRoute from '@/components/ProtectedRoute';
-import Home from '@/pages/Home';
-import Dashboard from '@/pages/Dashboard';
-import CircleRoom from '@/pages/CircleRoom';
-import KhatmPlanner from '@/pages/KhatmPlanner';
-import TafsirSession from '@/pages/TafsirSession';
+import { AuthProvider }    from '@/context/AuthContext';
+import AuthCallback        from '@/pages/AuthCallback';
+import ProtectedRoute      from '@/components/ProtectedRoute';
+import Home                from '@/pages/Home';
+import Dashboard           from '@/pages/Dashboard';   // stats home page
+import MyCircles           from '@/pages/MyCircles';   // circle list
+import Explore             from '@/pages/Explore';
+import Settings            from '@/pages/Settings';
+import Profile             from '@/pages/Profile';
+import CircleRoom          from '@/pages/CircleRoom';
+import KhatmPlanner        from '@/pages/KhatmPlanner';
+import TafsirSession       from '@/pages/TafsirSession';
 
 const queryClient = new QueryClient();
 
-// ── Placeholder Pages ─────────────────────────────────────────────────────────
+// ── Auth error fallback ───────────────────────────────────────────────────────
 const AuthError = () => (
   <div className='flex h-screen items-center justify-center'>
     <p className='text-red-500 text-lg'>Login failed. Please try again.</p>
@@ -19,41 +35,61 @@ const AuthError = () => (
 );
 
 // ── App ───────────────────────────────────────────────────────────────────────
-const App = () => {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            <Route path='/' element={<Home />} />
-            <Route path='/auth/callback' element={<AuthCallback />} />
-            <Route path='/auth/error' element={<AuthError />} />
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <BrowserRouter>
+      <AuthProvider>
+        <Routes>
+          {/* ── Public routes ─────────────────────────────────────── */}
+          <Route path='/'              element={<Home />} />
+          <Route path='/auth/callback' element={<AuthCallback />} />
+          <Route path='/auth/error'    element={<AuthError />} />
 
-            <Route path='/dashboard' element={
-              <ProtectedRoute><Dashboard /></ProtectedRoute>
-            } />
+          {/* ── Protected routes ──────────────────────────────────── */}
 
-            {/* My Circles sidebar link target — renders same as Dashboard */}
-            <Route path='/circles' element={
-              <ProtectedRoute><Dashboard /></ProtectedRoute>
-            } />
+          {/* Dashboard home — greeting, stats, activity, continue reading */}
+          <Route path='/dashboard' element={
+            <ProtectedRoute><Dashboard /></ProtectedRoute>
+          } />
 
-            <Route path='/circle/:roomId' element={
-              <ProtectedRoute><CircleRoom /></ProtectedRoute>
-            } />
+          {/* My Circles — full circle list + create modal */}
+          <Route path='/circles' element={
+            <ProtectedRoute><MyCircles /></ProtectedRoute>
+          } />
 
-            <Route path='/circle/:roomId/khatm' element={
-              <ProtectedRoute><KhatmPlanner /></ProtectedRoute>
-            } />
+          {/* Explore — discover public circles + community reflections */}
+          <Route path='/explore' element={
+            <ProtectedRoute><Explore /></ProtectedRoute>
+          } />
 
-            <Route path='/circle/:roomId/session' element={
-              <ProtectedRoute><TafsirSession /></ProtectedRoute>
-            } />
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
-    </QueryClientProvider>
-  );
-};
+          {/* Settings — preferences, profile, account */}
+          <Route path='/settings' element={
+            <ProtectedRoute><Settings /></ProtectedRoute>
+          } />
+
+          {/* Profile — user stats, reading history, account info */}
+          <Route path='/profile' element={
+            <ProtectedRoute><Profile /></ProtectedRoute>
+          } />
+
+          {/* Circle detail room — unchanged */}
+          <Route path='/circle/:roomId' element={
+            <ProtectedRoute><CircleRoom /></ProtectedRoute>
+          } />
+
+          {/* Khatm planner — unchanged */}
+          <Route path='/circle/:roomId/khatm' element={
+            <ProtectedRoute><KhatmPlanner /></ProtectedRoute>
+          } />
+
+          {/* Tafsir session — unchanged */}
+          <Route path='/circle/:roomId/session' element={
+            <ProtectedRoute><TafsirSession /></ProtectedRoute>
+          } />
+        </Routes>
+      </AuthProvider>
+    </BrowserRouter>
+  </QueryClientProvider>
+);
 
 export default App;

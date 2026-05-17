@@ -17,6 +17,9 @@ api.interceptors.request.use((config) => {
 });
 
 // ── Response interceptor — handle 401 ────────────────────────────────────────
+// proxy.js translates all QF 401s (permission errors) → 403 before they
+// reach the frontend. So any 401 here is a genuine session expiry from our
+// own backend — safe to logout unconditionally.
 api.interceptors.response.use(
   (response) => response,
   (error) => {

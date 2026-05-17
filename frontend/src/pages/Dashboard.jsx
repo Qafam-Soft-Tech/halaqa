@@ -1,11 +1,42 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { motion, AnimatePresence } from 'framer-motion';
-import DashboardLayout from '@/components/DashboardLayout';
-import api from '@/lib/api';
+// ─────────────────────────────────────────────────────────────────────────────
+// Dashboard.jsx  (new home page — replaces the old circles-only view)
+//
+// Sections:
+//   1. Greeting + quick-action buttons
+//   2. Four stat cards (circles, streak, verses read, active minutes)
+//   3. Two-column layout:
+//      Left  (2/3)  — recent circle activity feed
+//      Right (1/3)  — "Continue reading" bookmark + mini circles list
+//
+// Data sources:
+//   • /api/rooms/my            → circle count + mini list
+//   • /api/proxy/auth/v1/streaks           → current reading streak
+//   • /api/proxy/auth/v1/reading-sessions  → last session for "continue reading"
+//   • /api/proxy/auth/v1/activity-days     → active minutes / days
+//
+// All fetches use a safe wrapper — 403/404/network errors show '--' rather
+// than crashing the page.  The dashboard is fully functional even when the
+// QF prelive API is unavailable.
+// ─────────────────────────────────────────────────────────────────────────────
 
-// ── Fetch circles ─────────────────────────────────────────────────────────────
+import { useNavigate } from 'react-router-dom';
+import { useQuery }    from '@tanstack/react-query';
+import { motion }      from 'framer-motion';
+import DashboardLayout from '@/components/DashboardLayout';
+import { useAuth }     from '@/context/AuthContext';
+import api             from '@/lib/api';
+
+// ── Safe fetch helper — returns null instead of throwing ──────────────────────
+const fetchSafe = async (url) => {
+  try {
+    const res = await api.get(url);
+    return res.data;
+  } catch {
+    return null;
+  }
+};
+
+// ── Fetch circles (re-uses the shared query key so data is cached) ────────────
 const fetchMyCircles = async () => {
   try {
     const res   = await api.get('/rooms/my');
@@ -17,247 +48,459 @@ const fetchMyCircles = async () => {
   }
 };
 
-// ── Create Circle Modal ───────────────────────────────────────────────────────
-const CreateCircleModal = ({ onClose, onSuccess }) => {
-  const [form,    setForm]    = useState({ name: '', url: '', description: '', type: 'study' });
-  const [error,   setError]   = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const handleNameChange = (e) => {
-    const name = e.target.value;
-    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50);
-    setForm((prev) => ({ ...prev, name, url: slug }));
-  };
-
-  const handleSubmit = async () => {
-    if (!form.name.trim()) return setError('Circle name is required.');
-    if (!form.url.trim())  return setError('Circle URL is required.');
-    setError('');
-    setLoading(true);
-    try {
-      const res  = await api.post('/rooms/create', form);
-      const room = res.data?.data ?? res.data;
-      onSuccess(room);
-    } catch (err) {
-      setError(err.response?.data?.message || err.response?.data?.error || 'Failed to create circle. Please try again.');
-    }
-    setLoading(false);
-  };
-
-  return (
-    <AnimatePresence>
-      <motion.div
-        className='fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/70'
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-      >
-        <motion.div
-          className='bg-stone-900 border border-stone-700 rounded-2xl w-full max-w-md p-6 shadow-2xl'
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1,    y: 0  }}
-          exit={{    opacity: 0, scale: 0.95, y: 20 }}
-          transition={{ duration: 0.2 }}
-        >
-          <div className='flex items-center justify-between mb-6'>
-            <h2 className='text-white font-bold text-lg'>New Circle</h2>
-            <button onClick={onClose} className='text-stone-500 hover:text-white text-xl transition-colors'>✕</button>
-          </div>
-
-          <div className='space-y-4'>
-            <div>
-              <label className='block text-stone-400 text-sm mb-1.5'>Circle Name <span className='text-red-400'>*</span></label>
-              <input
-                type='text' value={form.name} onChange={handleNameChange}
-                placeholder='e.g. Al-Fajr Study Group' maxLength={50}
-                className='w-full bg-stone-800 border border-stone-700 focus:border-emerald-500 text-white placeholder-stone-500 rounded-lg px-4 py-2.5 text-sm outline-none transition-colors'
-              />
-            </div>
-            <div>
-              <label className='block text-stone-400 text-sm mb-1.5'>
-                Circle URL <span className='text-red-400'>*</span>
-                <span className='text-stone-600 text-xs ml-2'>(unique identifier)</span>
-              </label>
-              <div className='flex items-center bg-stone-800 border border-stone-700 focus-within:border-emerald-500 rounded-lg px-4 py-2.5 gap-1'>
-                <span className='text-stone-500 text-sm shrink-0'>quranreflect.com/</span>
-                <input
-                  type='text' value={form.url}
-                  onChange={(e) => setForm({ ...form, url: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 50) })}
-                  placeholder='my-circle'
-                  className='bg-transparent text-white text-sm outline-none flex-1 min-w-0'
-                />
-              </div>
-            </div>
-            <div>
-              <label className='block text-stone-400 text-sm mb-1.5'>Description</label>
-              <textarea
-                value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
-                placeholder='What is this circle about?' rows={3} maxLength={200}
-                className='w-full bg-stone-800 border border-stone-700 focus:border-emerald-500 text-white placeholder-stone-500 rounded-lg px-4 py-2.5 text-sm outline-none transition-colors resize-none'
-              />
-            </div>
-            <div>
-              <label className='block text-stone-400 text-sm mb-1.5'>Type</label>
-              <select
-                value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}
-                className='w-full bg-stone-800 border border-stone-700 focus:border-emerald-500 text-white rounded-lg px-4 py-2.5 text-sm outline-none transition-colors'
-              >
-                <option value='study'>Study Group (Public)</option>
-                <option value='family'>Family Circle (Private)</option>
-                <option value='mosque'>Mosque Page (Public)</option>
-              </select>
-            </div>
-            {error && <p className='text-red-400 text-sm'>{error}</p>}
-          </div>
-
-          <div className='flex gap-3 mt-6'>
-            <button onClick={onClose} className='flex-1 px-4 py-2.5 rounded-lg border border-stone-700 text-stone-400 hover:text-white hover:border-stone-500 text-sm transition-all'>
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmit} disabled={loading}
-              className='flex-1 px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-sm transition-all'
-            >
-              {loading ? 'Creating...' : 'Create Circle'}
-            </button>
-          </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
-  );
+// ── Time-of-day greeting ──────────────────────────────────────────────────────
+const getGreeting = () => {
+  const h = new Date().getHours();
+  if (h < 5)  return 'Assalamu Alaikum';
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  if (h < 21) return 'Good evening';
+  return 'Assalamu Alaikum';
 };
 
-// ── Skeleton Card ─────────────────────────────────────────────────────────────
-const SkeletonCard = () => (
-  <div className='bg-stone-900 border border-stone-800 rounded-2xl p-6 animate-pulse'>
-    <div className='h-5 bg-stone-700 rounded w-2/3 mb-3' />
-    <div className='h-4 bg-stone-800 rounded w-full mb-2' />
-    <div className='h-4 bg-stone-800 rounded w-3/4 mb-6' />
-    <div className='h-3 bg-stone-800 rounded w-1/4' />
+// ── Stat card ─────────────────────────────────────────────────────────────────
+const StatCard = ({ label, value, icon, accent = false, delay = 0 }) => (
+  <motion.div
+    className='bg-stone-900 border border-stone-800 rounded-2xl p-5'
+    initial={{ opacity: 0, y: 16 }}
+    animate={{ opacity: 1, y: 0  }}
+    transition={{ delay, duration: 0.3 }}
+  >
+    <p className='text-stone-500 text-xs mb-3 flex items-center gap-1.5'>
+      <span className='text-sm'>{icon}</span>
+      {label}
+    </p>
+    <p className={`text-3xl font-bold ${accent ? 'text-emerald-400' : 'text-white'}`}>
+      {value ?? '--'}
+    </p>
+  </motion.div>
+);
+
+// ── Avatar initials circle ────────────────────────────────────────────────────
+const Avatar = ({ name = '?', colorClass = 'bg-emerald-800 text-emerald-300' }) => (
+  <div
+    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${colorClass}`}
+  >
+    {name[0]?.toUpperCase() ?? '?'}
   </div>
 );
 
-const typeBadge = {
-  GROUP:  { label: 'Group',  color: 'bg-blue-900/50 text-blue-300'     },
-  PAGE:   { label: 'Page',   color: 'bg-amber-900/50 text-amber-300'   },
-  study:  { label: 'Study',  color: 'bg-blue-900/50 text-blue-300'     },
-  family: { label: 'Family', color: 'bg-violet-900/50 text-violet-300' },
-  mosque: { label: 'Mosque', color: 'bg-amber-900/50 text-amber-300'   },
+// ── Single activity row ───────────────────────────────────────────────────────
+const ActivityRow = ({ avatar, avatarColor, name, action, detail, time }) => (
+  <div className='flex gap-3 items-start py-3 border-b border-stone-800/60 last:border-0'>
+    <Avatar name={avatar} colorClass={avatarColor} />
+    <div className='flex-1 min-w-0'>
+      <p className='text-sm text-stone-300 leading-snug'>
+        <span className='font-medium text-white'>{name}</span>{' '}
+        {action}
+        {detail && (
+          <span className='text-emerald-400'> {detail}</span>
+        )}
+      </p>
+      <p className='text-xs text-stone-600 mt-0.5'>{time}</p>
+    </div>
+  </div>
+);
+
+// ── Continue Reading Banner ───────────────────────────────────────────────────
+// Shown at top of dashboard when the user has a prior reading session.
+// Fetches the chapter name from the QF content API for a richer display.
+const ContinueReadingBanner = ({ session, circles, navigate }) => {
+  // QF reading-sessions returns chapterNumber + verseNumber
+  const chapterNum = session?.chapterNumber
+    ?? Number(session?.startVerseKey?.split(':')[0])
+    ?? null;
+  const verseNum   = session?.verseNumber
+    ?? Number(session?.startVerseKey?.split(':')[1])
+    ?? null;
+
+  // Fetch the chapter name from QF content API
+  const { data: chapterData } = useQuery({
+    queryKey:  ['chapter', chapterNum],
+    queryFn:   () => fetchSafe(`/proxy/content/api/v4/chapters/${chapterNum}`),
+    enabled:   !!chapterNum,
+    staleTime: Infinity, // chapter names never change
+    retry:     false,
+  });
+
+  // QF content API returns { chapter: { name_simple, nameSimple, ... } }
+  const chapter     = chapterData?.chapter ?? chapterData;
+  const chapterName = chapter?.name_simple ?? chapter?.nameSimple ?? `Surah ${chapterNum}`;
+  const firstRoom   = circles?.[0];
+
+  if (!chapterNum) return null;
+
+  return (
+    <motion.div
+      className='mb-8 flex flex-col sm:flex-row sm:items-center gap-4 bg-emerald-950/70 border border-emerald-800/50 border-l-4 border-l-emerald-500 rounded-2xl px-5 py-4'
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0   }}
+      transition={{ duration: 0.35 }}
+    >
+      {/* Icon */}
+      <span className='text-3xl shrink-0 select-none'>📖</span>
+
+      {/* Text */}
+      <div className='flex-1 min-w-0'>
+        <p className='text-emerald-400 text-xs font-semibold uppercase tracking-widest mb-0.5'>
+          Continue where you left off
+        </p>
+        <p className='text-white font-bold text-lg leading-tight truncate'>
+          {chapterName}
+        </p>
+        {verseNum && (
+          <p className='text-emerald-300/60 text-xs mt-0.5'>
+            Ayah {verseNum} · Surah {chapterNum}
+          </p>
+        )}
+      </div>
+
+      {/* Resume button */}
+      <button
+        onClick={() => {
+          if (firstRoom && chapterNum) {
+            navigate(`/circle/${firstRoom.id}/session?surah=${chapterNum}`);
+          } else if (firstRoom) {
+            navigate(`/circle/${firstRoom.id}/session`);
+          } else {
+            navigate('/circles');
+          }
+        }}
+        className='shrink-0 flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold px-6 py-2.5 rounded-xl transition-all hover:-translate-y-0.5 shadow-lg shadow-emerald-900/50 whitespace-nowrap'
+      >
+        Resume Reading →
+      </button>
+    </motion.div>
+  );
 };
+
+// ── Skeleton shimmer block ────────────────────────────────────────────────────
+const Shimmer = ({ className = '' }) => (
+  <div className={`bg-stone-800 animate-pulse rounded ${className}`} />
+);
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 const Dashboard = () => {
-  const navigate    = useNavigate();
-  const queryClient = useQueryClient();
-  const [showModal, setShowModal] = useState(false);
+  const { user }   = useAuth();
+  const navigate   = useNavigate();
+  const firstName  = user?.username?.split(' ')[0] ?? 'there';
 
-  const { data: circles = [], isLoading } = useQuery({
+  // ── Data fetching ───────────────────────────────────────────────────────────
+
+  // Circles — shared query key with MyCircles so the cache is warm
+  const { data: circles = [], isLoading: circlesLoading } = useQuery({
     queryKey: ['my-circles'],
     queryFn:  fetchMyCircles,
   });
 
-  const handleCircleCreated = (room) => {
-    queryClient.invalidateQueries({ queryKey: ['my-circles'] });
-    setShowModal(false);
-    if (room?.id) navigate(`/circle/${room.id}`);
-  };
+  // Reading streak from QF user API
+  const { data: streakData } = useQuery({
+    queryKey: ['streak'],
+    queryFn:  () => fetchSafe('/proxy/auth/v1/streaks?first=1&status=ACTIVE'),
+    retry:    false,
+    staleTime: 60_000,
+  });
+
+  // Last reading session → banner + "continue reading" sidebar card
+  // Primary: dedicated /reading/sessions backend route (queryKey per spec)
+  const { data: readingSessionsData } = useQuery({
+    queryKey: ['reading-sessions'],
+    queryFn:  () => fetchSafe('/reading/sessions'),
+    retry:    false,
+    staleTime: 30_000,
+  });
+
+  // Last reading session → "continue reading" card (proxy fallback)
+  const { data: sessionData } = useQuery({
+    queryKey: ['last-reading-session'],
+    queryFn:  () => fetchSafe('/proxy/auth/v1/reading-sessions?first=1'),
+    retry:    false,
+    staleTime: 30_000,
+  });
+
+  // Activity days for "active minutes" stat
+  const { data: activityData } = useQuery({
+    queryKey: ['activity-days'],
+    queryFn:  () => {
+      const today = new Date().toISOString().split('T')[0];
+      return fetchSafe(`/proxy/auth/v1/activity-days?first=1&type=QURAN&from=${today}&to=${today}`);
+    },
+    retry:    false,
+    staleTime: 60_000,
+  });
+
+  // streak: QF returns { data: [{ days: N, status: 'ACTIVE' }] }
+  const streak      = streakData?.data?.[0]?.days ?? 0;
+
+  // Banner session: prefer dedicated query, fall back to proxy query
+  const bannerSession = readingSessionsData?.data?.[0]
+    ?? readingSessionsData?.[0]
+    ?? sessionData?.data?.[0]
+    ?? sessionData?.[0]
+    ?? null;
+
+  // Sidebar "continue reading" uses same resolved session
+  const lastSession = bannerSession;
+  // secondsRead is the correct field (not 'duration')
+  const todayMins   = activityData?.data?.[0]?.secondsRead != null
+    ? Math.round(activityData.data[0].secondsRead / 60)
+    : null;
+
+  // versesRead is a direct field on each activity day record
+  const versesRead  = activityData?.data?.[0]?.versesRead ?? null;
 
   return (
     <DashboardLayout>
-      {/* ── Page header ─────────────────────────────────────────────── */}
+
+      {/* ── 1. Greeting + CTA ─────────────────────────────────────── */}
       <motion.div
-        className='flex items-center justify-between mb-8'
+        className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8'
         initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
+        animate={{ opacity: 1, y: 0  }}
         transition={{ duration: 0.3 }}
       >
         <div>
-          <h1 className='text-2xl font-bold text-white'>My Circles</h1>
-          <p className='text-stone-500 text-sm mt-1'>Your Quran accountability groups</p>
+          <p className='text-stone-500 text-sm mb-1'>{getGreeting()} 👋</p>
+          <h1 className='text-2xl font-bold text-white'>{firstName}</h1>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className='flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-all hover:-translate-y-0.5 shadow-lg shadow-emerald-900/40'
-        >
-          <span className='text-base leading-none'>+</span>
-          New Circle
-        </button>
+
+        <div className='flex items-center gap-3'>
+          <button
+            onClick={() => navigate('/circles')}
+            className='flex items-center gap-2 border border-stone-700 hover:border-stone-600 text-stone-300 hover:text-white text-sm px-4 py-2.5 rounded-xl transition-all'
+          >
+            ◎ My circles
+          </button>
+          <button
+            onClick={() => navigate('/circles')}
+            className='flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-all hover:-translate-y-0.5 shadow-lg shadow-emerald-900/40'
+          >
+            + New circle
+          </button>
+        </div>
       </motion.div>
 
-      {/* ── Loading ──────────────────────────────────────────────────── */}
-      {isLoading && (
-        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-          <SkeletonCard /><SkeletonCard /><SkeletonCard />
-        </div>
-      )}
-
-      {/* ── Empty state ──────────────────────────────────────────────── */}
-      {!isLoading && circles.length === 0 && (
-        <motion.div
-          className='flex flex-col items-center justify-center py-24 text-center'
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.4 }}
-        >
-          <div className='text-5xl mb-4 opacity-30'>◎</div>
-          <p className='text-stone-400 text-base mb-1'>You have no circles yet.</p>
-          <p className='text-stone-600 text-sm'>Create one to get started.</p>
-          <button
-            onClick={() => setShowModal(true)}
-            className='mt-6 bg-emerald-700 hover:bg-emerald-600 text-white text-sm px-5 py-2.5 rounded-xl transition-all'
-          >
-            + Create your first circle
-          </button>
-        </motion.div>
-      )}
-
-      {/* ── Circle cards — staggered animation ───────────────────────── */}
-      {!isLoading && circles.length > 0 && (
-        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-          {circles.map((circle, index) => {
-            const badgeKey = circle.roomType || circle.type || 'study';
-            const badge    = typeBadge[badgeKey] ?? typeBadge.study;
-            return (
-              <motion.div
-                key={circle.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1, duration: 0.3 }}
-                onClick={() => navigate(`/circle/${circle.id}`)}
-                className='group bg-stone-900 border border-stone-800 hover:border-emerald-700 rounded-2xl p-6 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-emerald-950'
-              >
-                <div className='flex items-start justify-between mb-3'>
-                  <h3 className='text-white font-semibold text-base group-hover:text-emerald-400 transition-colors'>
-                    {circle.name}
-                  </h3>
-                  <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ml-2 ${badge.color}`}>
-                    {badge.label}
-                  </span>
-                </div>
-                <p className='text-stone-500 text-sm leading-relaxed mb-5 line-clamp-2'>
-                  {circle.description || 'No description provided.'}
-                </p>
-                <div className='flex items-center justify-between'>
-                  <span className='text-stone-600 text-xs'>
-                    {circle.membersCount ?? circle.members_count ?? '—'} members
-                  </span>
-                  <span className='text-emerald-600 text-xs opacity-0 group-hover:opacity-100 transition-opacity'>
-                    Open →
-                  </span>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* ── Modal ────────────────────────────────────────────────────── */}
-      {showModal && (
-        <CreateCircleModal
-          onClose={() => setShowModal(false)}
-          onSuccess={handleCircleCreated}
+      {/* ── 1.5 Continue Reading Banner ───────────────────────────── */}
+      {bannerSession && (
+        <ContinueReadingBanner
+          session={bannerSession}
+          circles={circles}
+          navigate={navigate}
         />
       )}
+
+      {/* ── 2. Stat cards ─────────────────────────────────────────── */}
+      <div className='grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8'>
+        <StatCard
+          label='My circles'
+          value={circlesLoading ? null : circles.length || 0}
+          icon='◎'
+          delay={0}
+        />
+        <StatCard
+          label='Day streak'
+          value={streak}
+          icon='◈'
+          accent
+          delay={0.05}
+        />
+        <StatCard
+          label='Verses read'
+          value={versesRead}
+          icon='◧'
+          delay={0.1}
+        />
+        <StatCard
+          label='Mins today'
+          value={todayMins}
+          icon='◷'
+          accent
+          delay={0.15}
+        />
+      </div>
+
+      {/* ── 3. Two-column grid ────────────────────────────────────── */}
+      <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
+
+        {/* ── Left: activity feed (2 cols) ──────────────────────── */}
+        <motion.div
+          className='lg:col-span-2'
+          initial={{ opacity: 0, x: -12 }}
+          animate={{ opacity: 1, x: 0  }}
+          transition={{ delay: 0.2, duration: 0.35 }}
+        >
+          <h2 className='text-stone-400 text-xs font-medium uppercase tracking-widest mb-3'>
+            Recent activity
+          </h2>
+
+          <div className='bg-stone-900 border border-stone-800 rounded-2xl overflow-hidden'>
+            {circlesLoading ? (
+              /* Loading state */
+              <div className='p-5 space-y-4'>
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className='flex gap-3'>
+                    <Shimmer className='w-8 h-8 rounded-full shrink-0' />
+                    <div className='flex-1 space-y-2'>
+                      <Shimmer className='h-4 w-3/4' />
+                      <Shimmer className='h-3 w-1/4' />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : circles.length === 0 ? (
+              /* No circles yet */
+              <div className='flex flex-col items-center justify-center py-16 text-center px-6'>
+                <div className='text-4xl mb-3 opacity-20'>◎</div>
+                <p className='text-stone-500 text-sm mb-1'>No activity yet</p>
+                <p className='text-stone-600 text-xs mb-5'>
+                  Create a circle to start tracking group activity
+                </p>
+                <button
+                  onClick={() => navigate('/circles')}
+                  className='text-xs text-emerald-400 hover:text-emerald-300 border border-emerald-800 hover:border-emerald-700 px-4 py-2 rounded-lg transition-all'
+                >
+                  + Create first circle
+                </button>
+              </div>
+            ) : (
+              /* Activity rows built from circle data we have */
+              <div className='px-5 divide-y-0'>
+                {circles.slice(0, 5).map((circle, i) => (
+                  <ActivityRow
+                    key={circle.id}
+                    avatar={circle.name?.[0] ?? 'C'}
+                    avatarColor={
+                      i % 3 === 0 ? 'bg-emerald-800 text-emerald-300' :
+                      i % 3 === 1 ? 'bg-violet-900  text-violet-300'  :
+                                    'bg-amber-900   text-amber-300'
+                    }
+                    name={circle.name}
+                    action='is active in your circles'
+                    detail={null}
+                    time={`${circle.membersCount ?? circle.members_count ?? 0} members`}
+                  />
+                ))}
+
+                {/* CTA to enter a circle */}
+                <div className='px-0 pt-4 pb-1'>
+                  <button
+                    onClick={() => navigate('/circles')}
+                    className='text-xs text-emerald-500 hover:text-emerald-400 transition-colors'
+                  >
+                    View all circles →
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </motion.div>
+
+        {/* ── Right: continue reading + mini circle list ─────────── */}
+        <motion.div
+          className='space-y-5'
+          initial={{ opacity: 0, x: 12 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.25, duration: 0.35 }}
+        >
+
+          {/* Continue reading card */}
+          <div>
+            <h2 className='text-stone-400 text-xs font-medium uppercase tracking-widest mb-3'>
+              Continue reading
+            </h2>
+
+            {lastSession ? (
+              <div className='bg-emerald-950 border border-emerald-800/50 rounded-2xl p-5'>
+                <p className='text-emerald-400 text-xs mb-1'>Last position</p>
+                <p className='text-white font-semibold text-base mb-0.5'>
+                  {lastSession.chapterNumber
+                    ? `Surah ${lastSession.chapterNumber}`
+                    : lastSession.startVerseKey
+                    ? `Surah ${lastSession.startVerseKey.split(':')[0]}`
+                    : 'Quran'}
+                </p>
+                {(lastSession.chapterNumber || lastSession.startVerseKey) && (
+                  <p className='text-emerald-300/70 text-xs mb-4'>
+                    {lastSession.chapterNumber && lastSession.verseNumber
+                      ? `${lastSession.chapterNumber}:${lastSession.verseNumber}`
+                      : lastSession.startVerseKey ?? ''}
+                  </p>
+                )}
+                <button
+                  onClick={() => {
+                    const surah    = lastSession.chapterNumber ?? lastSession.startVerseKey?.split(':')[0];
+                    const circleId = circles[0]?.id;
+                    if (circleId && surah) {
+                      navigate(`/circle/${circleId}/session?surah=${surah}`);
+                    } else if (circleId) {
+                      navigate(`/circle/${circleId}/session`);
+                    } else {
+                      navigate('/circles');
+                    }
+                  }}
+                  className='w-full bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium py-2.5 rounded-xl transition-all hover:-translate-y-0.5'
+                >
+                  Resume →
+                </button>
+              </div>
+            ) : (
+              <div className='bg-stone-900 border border-stone-800 rounded-2xl p-5 text-center'>
+                <p className='text-stone-600 text-3xl mb-3'>📖</p>
+                <p className='text-stone-500 text-sm mb-1'>No sessions yet</p>
+                <p className='text-stone-600 text-xs mb-4'>
+                  Start a tafsir session to track your reading
+                </p>
+                <button
+                  onClick={() => circles[0] && navigate(`/circle/${circles[0].id}/session`)}
+                  disabled={circles.length === 0}
+                  className='w-full bg-stone-800 hover:bg-stone-700 disabled:opacity-40 disabled:cursor-not-allowed text-stone-300 text-xs py-2 rounded-lg transition-all'
+                >
+                  Start reading
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Mini circles list */}
+          {circles.length > 0 && (
+            <div>
+              <h2 className='text-stone-400 text-xs font-medium uppercase tracking-widest mb-3'>
+                My circles
+              </h2>
+              <div className='bg-stone-900 border border-stone-800 rounded-2xl overflow-hidden divide-y divide-stone-800/60'>
+                {circles.slice(0, 4).map((circle) => (
+                  <button
+                    key={circle.id}
+                    onClick={() => navigate(`/circle/${circle.id}`)}
+                    className='w-full flex items-center justify-between px-4 py-3 hover:bg-stone-800/50 transition-colors group'
+                  >
+                    <div className='flex items-center gap-3 min-w-0'>
+                      <div className='w-7 h-7 rounded-full bg-emerald-900 flex items-center justify-center text-emerald-400 text-xs font-bold shrink-0'>
+                        {circle.name?.[0]?.toUpperCase() ?? 'C'}
+                      </div>
+                      <p className='text-stone-300 text-sm truncate group-hover:text-white transition-colors'>
+                        {circle.name}
+                      </p>
+                    </div>
+                    <span className='text-stone-700 group-hover:text-emerald-500 text-xs transition-colors shrink-0 ml-2'>
+                      →
+                    </span>
+                  </button>
+                ))}
+
+                {circles.length > 4 && (
+                  <button
+                    onClick={() => navigate('/circles')}
+                    className='w-full px-4 py-2.5 text-xs text-emerald-600 hover:text-emerald-400 transition-colors'
+                  >
+                    + {circles.length - 4} more circles
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </motion.div>
+      </div>
     </DashboardLayout>
   );
 };

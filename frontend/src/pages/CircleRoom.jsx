@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import DashboardLayout from '@/components/DashboardLayout';
 import ReflectionForm from '@/components/ReflectionForm';
 import AccountabilityDashboard from '@/components/AccountabilityDashboard';
+import CircleProgressBoard from '@/components/CircleProgressBoard';
 import { useAuth } from '@/context/AuthContext';
 import api from '@/lib/api';
 
@@ -265,7 +266,7 @@ const CircleRoom = () => {
   // Collections → /auth/v1/collections (personal data ✅)
   const { data: collectionsData, isLoading: collectionsLoading } = useQuery({
     queryKey: ['collections', roomId],
-    queryFn:  () => fetchSafe(`/proxy/auth/v1/collections`),
+    queryFn:  () => fetchSafe(`/proxy/auth/v1/collections?first=20`),
     enabled:  activeTab === 'collections',
   });
 
@@ -308,6 +309,7 @@ const CircleRoom = () => {
 
       {/* ── Tabs ─────────────────────────────────────────────────────── */}
       <div className='flex items-center gap-1 mb-6 bg-stone-900 border border-stone-800 rounded-xl p-1.5 w-fit overflow-x-auto'>
+        <TabButton label='Progress'    active={activeTab === 'progress'}    onClick={() => setActiveTab('progress')}                              />
         <TabButton label='Feed'        active={activeTab === 'feed'}        onClick={() => setActiveTab('feed')}        count={posts.length}       />
         <TabButton label='Members'     active={activeTab === 'members'}     onClick={() => setActiveTab('members')}     count={members.length}     />
         <TabButton label='Collections' active={activeTab === 'collections'} onClick={() => setActiveTab('collections')} count={collections.length} />
@@ -315,6 +317,13 @@ const CircleRoom = () => {
       </div>
 
       <AnimatePresence mode='wait'>
+
+        {/* ── TAB 0: Progress ────────────────────────────────────────── */}
+        {activeTab === 'progress' && (
+          <motion.div key='progress' initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+            <CircleProgressBoard roomId={roomId} />
+          </motion.div>
+        )}
 
         {/* ── TAB 1: Feed ────────────────────────────────────────────── */}
         {activeTab === 'feed' && (

@@ -32,6 +32,18 @@ export const AuthProvider = ({ children }) => {
     window.location.href = '/api/auth/login';
   };
 
+  // Called by AuthCallback after OAuth redirect — saves token AND hydrates
+  // user state before navigating, so ProtectedRoute never sees user = null.
+  const loginSuccess = async (token) => {
+    localStorage.setItem('halaqa_token', token);
+    try {
+      const res = await api.get('/auth/me');
+      setUser(res.data);
+    } catch {
+      localStorage.removeItem('halaqa_token');
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('halaqa_token');
     setUser(null);
@@ -48,7 +60,7 @@ export const AuthProvider = ({ children }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, loginSuccess, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,16 +1,21 @@
 import { useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
 
 const AuthCallback = () => {
-  const [searchParams] = useSearchParams();
-  const navigate       = useNavigate();
+  const [searchParams]   = useSearchParams();
+  const navigate         = useNavigate();
+  const { loginSuccess } = useAuth();
 
   useEffect(() => {
     const token = searchParams.get('token');
 
     if (token) {
-      localStorage.setItem('halaqa_token', token);
-      navigate('/dashboard', { replace: true });
+      // loginSuccess saves token + fetches /auth/me + sets user in context
+      // BEFORE we navigate — so ProtectedRoute never sees user = null on arrival.
+      loginSuccess(token).then(() => {
+        navigate('/dashboard', { replace: true });
+      });
     } else {
       navigate('/?error=auth_failed', { replace: true });
     }

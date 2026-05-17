@@ -11,6 +11,7 @@ const authRoutes = require('./routes/auth');
 const proxyRoutes = require('./routes/proxy');
 const roomRoutes = require('./routes/rooms');
 const goalRoutes = require('./routes/goals');
+const readingRoutes = require('./routes/reading');  // ← Step 10.2
 
 // Socket
 const { initSocket } = require('./sockets/sessionSocket');
@@ -41,6 +42,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/proxy', proxyRoutes);
 app.use('/api/rooms', roomRoutes);
 app.use('/api/goals', goalRoutes);
+app.use('/api/reading', readingRoutes);  // ← Step 10.2
+
 // ── Health / Root ─────────────────────────────────────────────────────────────
 app.get('/', (req, res) => {
   res.json({ service: "Halaqa Backend API", status: "live", version: "1.0.0" });

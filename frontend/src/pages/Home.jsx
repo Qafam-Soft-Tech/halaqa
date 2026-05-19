@@ -16,6 +16,16 @@ const features = [
     title: 'Reflection Board',
     desc: 'Leave tafsir notes and personal reflections on any verse. Build a living commentary your circle returns to again and again.',
   },
+  {
+    icon: '🗣️',
+    title: "Speak Qur'an",
+    desc: "Master Quranic vocabulary word by word. Pronunciation drills, audio from real reciters, and spaced repetition — so every word you read, you truly understand.",
+  },
+  {
+    icon: '🏆',
+    title: 'Tournament',
+    desc: 'Compete in coin-staked vocabulary leagues — Bronze to Diamond. Earn coins by learning, win more by advancing leagues. Knowledge has never had higher stakes.',
+  },
 ];
 
 const Home = () => {
@@ -96,7 +106,7 @@ const Home = () => {
           Everything your circle needs
         </p>
 
-        <div className='grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto'>
+        <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 max-w-6xl mx-auto'>
           {features.map(({ icon, title, desc }) => (
             <div
               key={title}

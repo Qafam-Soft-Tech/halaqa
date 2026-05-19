@@ -248,7 +248,7 @@ const CircleRoom = () => {
   // Room profile → /quran-reflect/v1/rooms/:id
   const { data: room, isLoading: roomLoading } = useQuery({
     queryKey: ['room', roomId],
-    queryFn:  () => fetchSafe(`/proxy/quran-reflect/v1/rooms/${roomId}`),
+    queryFn:  () => fetchSafe(`/rooms/${roomId}/profile`),
   });
 
   // Members → our backend route (which calls /quran-reflect/v1/rooms/:id/members)
@@ -277,7 +277,7 @@ const CircleRoom = () => {
     ...localCollections,
   ];
 
-  const roomName        = room?.name        ?? room?.data?.name        ?? `Circle ${roomId}`;
+  const roomName        = room?.name ?? room?.data?.name ?? `Circle ${roomId}`;
   const roomDescription = room?.description ?? room?.data?.description ?? '';
   const isAdmin         = members.some(
     (m) => m.username === user?.username && (m.role === 'admin' || m.role === 'owner')
@@ -308,7 +308,7 @@ const CircleRoom = () => {
       </motion.div>
 
       {/* ── Tabs ─────────────────────────────────────────────────────── */}
-      <div className='flex items-center gap-1 mb-6 bg-stone-900 border border-stone-800 rounded-xl p-1.5 w-fit overflow-x-auto'>
+      <div className='flex items-center gap-1 mb-6 bg-stone-900 border border-stone-800 rounded-xl p-1.5 overflow-x-auto max-w-full'>
         <TabButton label='Progress'    active={activeTab === 'progress'}    onClick={() => setActiveTab('progress')}                              />
         <TabButton label='Feed'        active={activeTab === 'feed'}        onClick={() => setActiveTab('feed')}        count={posts.length}       />
         <TabButton label='Members'     active={activeTab === 'members'}     onClick={() => setActiveTab('members')}     count={members.length}     />

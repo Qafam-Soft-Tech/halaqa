@@ -70,8 +70,8 @@ router.get('/my', authenticate, async (req, res) => {
   try {
     const access_token = await getUserToken(req.userId);
     const qfRes = await axios.get(
-      `${process.env.QURAN_API_BASE}/quran-reflect/v1/rooms`,
-      { headers: qfHeaders(access_token), timeout: 8000 }
+      `${process.env.QURAN_API_BASE}/auth/v1/rooms/joined-rooms`,
+      { headers: qfHeaders(access_token), timeout: 15000 }
     );
     const qfData = qfRes.data;
 
@@ -100,6 +100,34 @@ router.get('/my', authenticate, async (req, res) => {
   }
 });
 
+// ── GET /api/rooms/:roomId/profile ───────────────────────────────────────────
+// Try QF API first; fall back to local circle_membership cache.
+router.get('/:roomId/profile', authenticate, async (req, res) => {
+  const { roomId } = req.params;
+  try {
+    const access_token = await getUserToken(req.userId);
+    const qfRes = await axios.get(
+      `${process.env.QURAN_API_BASE}/quran-reflect/v1/rooms/${roomId}`,
+      { headers: qfHeaders(access_token), timeout: 15000 }
+    );
+    return res.json(qfRes.data);
+  } catch (err) {
+    try {
+      const { rows } = await pool.query(
+        `SELECT room_id AS id, room_name AS name, room_description AS description,
+                room_type AS "roomType", room_public AS public, role
+         FROM circle_membership
+         WHERE room_id = $1
+         LIMIT 1`,
+        [String(roomId)]
+      );
+      if (rows.length > 0) return res.json({ data: rows[0] });
+    } catch (_) {}
+    if (err.response) return res.status(err.response.status).json(err.response.data);
+    return res.status(404).json({ error: 'Room not found' });
+  }
+});
+
 // ── GET /api/rooms/:roomId/members ────────────────────────────────────────────
 router.get('/:roomId/members', authenticate, async (req, res) => {
   const { roomId } = req.params;
@@ -107,15 +135,27 @@ router.get('/:roomId/members', authenticate, async (req, res) => {
     const access_token = await getUserToken(req.userId);
     const qfRes = await axios.get(
       `${process.env.QURAN_API_BASE}/quran-reflect/v1/rooms/${roomId}/members`,
-      { headers: qfHeaders(access_token), timeout: 8000 }
+      { headers: qfHeaders(access_token), timeout: 15000 }
     );
     return res.json(qfRes.data);
   } catch (err) {
     if (err.response) return res.status(err.response.status).json(err.response.data);
     console.error('[Rooms /members Error]', err.message);
-    // Return at least the current user as a member
-    const user = await pool.query('SELECT id, username, email FROM users WHERE id = $1', [req.userId]);
-    return res.json({ data: user.rows.map(u => ({ ...u, role: 'admin' })) });
+    // Fallback — serve all cached members from circle_membership
+    try {
+      const { rows } = await pool.query(
+        `SELECT u.id, u.username, u.email, cm.role
+         FROM circle_membership cm
+         JOIN users u ON u.id = cm.user_id
+         WHERE cm.room_id = $1
+         ORDER BY cm.joined_at ASC`,
+        [String(roomId)]
+      );
+      return res.json({ data: rows });
+    } catch (_) {
+      const user = await pool.query('SELECT id, username, email FROM users WHERE id = $1', [req.userId]);
+      return res.json({ data: user.rows.map(u => ({ ...u, role: 'admin' })) });
+    }
   }
 });
 

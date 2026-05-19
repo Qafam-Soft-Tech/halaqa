@@ -152,6 +152,7 @@ router.all('/*', authenticate, async (req, res) => {
       url:     targetUrl,
       params:  req.query,
       data:    req.body,
+      timeout: 15_000,           // 15 s — pre-live API can be slow
       headers: {
         'x-auth-token': authToken,
         'x-client-id':  process.env.QURAN_CLIENT_ID,
@@ -187,6 +188,7 @@ router.all('/*', authenticate, async (req, res) => {
             url:     `${process.env.QURAN_API_BASE}${req.path}`,
             params:  req.query,
             data:    req.body,
+            timeout: 15_000,           // 15 s — match main request
             headers: {
               'x-auth-token': newToken,
               'x-client-id':  process.env.QURAN_CLIENT_ID,

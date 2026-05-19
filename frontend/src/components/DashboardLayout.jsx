@@ -14,7 +14,7 @@ const navItems = [
   { to: '/circles',     label: 'My Circles',    icon: '◎', end: false, badge: null  },
   { to: '/daily',       label: 'Daily Verse',   icon: '☽', end: false, badge: 'NEW' },
   { to: '/speak-quran', label: "Speak Qur'an",  icon: '◈', end: false, badge: null  },
-  { to: '/tournament',  label: 'Tournament',    icon: '🏆', end: false, badge: null  }, // ← ADDED
+  { to: '/tournament',  label: 'Tournament',    icon: '◉', end: false, badge: null  }, // ← ADDED
   { to: '/explore',     label: 'Explore',       icon: '⊕', end: false, badge: null  },
   { to: '/settings',    label: 'Settings',      icon: '⊙', end: false, badge: null  },
 ];

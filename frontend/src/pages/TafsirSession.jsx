@@ -514,21 +514,21 @@ const TafsirSession = () => {
       </div>
 
       {/* ── Surah title + Complete Session button ─────────────────── */}
-      {/* UNCHANGED */}
-      <div className='flex items-center justify-between mb-8'>
-        <div className='text-center flex-1'>
+      <div className='relative flex items-center justify-center mb-8'>
+        {/* Title — always centered */}
+        <div className='text-center'>
           <h1 className='text-white font-bold text-xl'>
             {surahNumber}. {SURAHS[Number(surahNumber) - 1]}
           </h1>
           <p className='text-stone-500 text-xs mt-1'>Live Session · Room {roomId}</p>
         </div>
 
-        {/* Complete Session button (top bar) */}
+        {/* Complete Session button — absolutely positioned top-right */}
         {verses.length > 0 && !sessionLogged && (
           <button
             onClick={handleCompleteSession}
             disabled={loggingSession}
-            className='shrink-0 flex items-center gap-2 bg-stone-800 hover:bg-emerald-700 border border-stone-700 hover:border-emerald-600 text-stone-300 hover:text-white text-xs font-medium px-4 py-2 rounded-xl transition-all'
+            className='absolute right-0 flex items-center gap-2 bg-stone-800 hover:bg-emerald-700 border border-stone-700 hover:border-emerald-600 text-stone-300 hover:text-white text-xs font-medium px-4 py-2 rounded-xl transition-all'
           >
             {loggingSession ? (
               <div className='w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin' />
@@ -540,7 +540,7 @@ const TafsirSession = () => {
         )}
 
         {sessionLogged && (
-          <span className='shrink-0 flex items-center gap-1.5 text-emerald-400 text-xs bg-emerald-900/30 border border-emerald-800/40 px-3 py-2 rounded-xl'>
+          <span className='absolute right-0 flex items-center gap-1.5 text-emerald-400 text-xs bg-emerald-900/30 border border-emerald-800/40 px-3 py-2 rounded-xl'>
             ✓ Session logged
           </span>
         )}

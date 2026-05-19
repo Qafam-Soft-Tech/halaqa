@@ -7,11 +7,13 @@ const http = require('http');
 const { Server } = require('socket.io');
 
 // Routes
-const authRoutes = require('./routes/auth');
-const proxyRoutes = require('./routes/proxy');
-const roomRoutes = require('./routes/rooms');
-const goalRoutes = require('./routes/goals');
+const authRoutes    = require('./routes/auth');
+const proxyRoutes   = require('./routes/proxy');
+const roomRoutes    = require('./routes/rooms');
+const goalRoutes    = require('./routes/goals');
 const readingRoutes = require('./routes/reading');  // ← Step 10.2
+const dailyRoutes   = require('./routes/daily');
+const learnRoutes   = require('./routes/learn');    // ← Phase 13A
 
 // Socket
 const { initSocket } = require('./sockets/sessionSocket');
@@ -37,12 +39,16 @@ app.use(cors({
 }));
 app.use(express.json());
 
+
 // ── Routes ────────────────────────────────────────────────────────────────────
-app.use('/api/auth', authRoutes);
-app.use('/api/proxy', proxyRoutes);
-app.use('/api/rooms', roomRoutes);
-app.use('/api/goals', goalRoutes);
+app.use('/api/auth',    authRoutes);
+app.use('/api/daily',   dailyRoutes);
+app.use('/api/proxy',   proxyRoutes);
+app.use('/api/rooms',   roomRoutes);
+app.use('/api/goals',   goalRoutes);
 app.use('/api/reading', readingRoutes);  // ← Step 10.2
+app.use('/api/learn',   learnRoutes);    // ← Phase 13A  (words, answer, progress)
+app.use('/api/coins',   learnRoutes);    // ← Phase 13A  (alias: GET /api/coins/coins)
 
 // ── Health / Root ─────────────────────────────────────────────────────────────
 app.get('/', (req, res) => {
@@ -67,4 +73,4 @@ server.listen(PORT, () => {
   console.log('Halaqa backend running on port ' + PORT);
 });
 
-module.exports = { app, server };
+module.exports = { app, server };   

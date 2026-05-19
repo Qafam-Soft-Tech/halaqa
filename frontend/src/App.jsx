@@ -6,7 +6,8 @@
 //   • /explore → Explore    (was: blank — route did not exist)
 //   • /settings → Settings  (was: blank — route did not exist)
 //   • /dashboard → Dashboard (now: stats home page, not the circles list)
-//   • /daily → DailyVerse   (new — public page, no auth required)  ← ADDED
+//   • /daily → DailyVerse   (new — public page, no auth required)
+//   • /speak-quran → SpeakQuran  (new — Speak Qur'an hub)  ← ADDED
 // Everything else — auth flow, CircleRoom, KhatmPlanner, TafsirSession — is
 // completely unchanged.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -25,7 +26,9 @@ import Profile             from '@/pages/Profile';
 import CircleRoom          from '@/pages/CircleRoom';
 import KhatmPlanner        from '@/pages/KhatmPlanner';
 import TafsirSession       from '@/pages/TafsirSession';
-import DailyVerse          from '@/pages/DailyVerse';  // ← ADDED
+import DailyVerse          from '@/pages/DailyVerse';
+import SpeakQuran          from '@/pages/SpeakQuran';  // ← ADDED
+import SpeakQuranLesson    from '@/pages/SpeakQuranLesson';
 
 const queryClient = new QueryClient();
 
@@ -48,7 +51,7 @@ const App = () => (
           <Route path='/auth/error'    element={<AuthError />} />
 
           {/* Daily Quran Share — public, no login required */}
-          <Route path='/daily'         element={<DailyVerse />} />  {/* ← ADDED */}
+          <Route path='/daily'         element={<DailyVerse />} />
 
           {/* ── Protected routes ──────────────────────────────────── */}
 
@@ -75,6 +78,15 @@ const App = () => (
           {/* Profile — user stats, reading history, account info */}
           <Route path='/profile' element={
             <ProtectedRoute><Profile /></ProtectedRoute>
+          } />
+
+          {/* Speak Qur'an — vocabulary learning hub */}
+          <Route path='/speak-quran' element={
+            <ProtectedRoute><SpeakQuran /></ProtectedRoute>
+          } />                                                   
+          {/* Speak Qur'an — word learning lesson */}
+          <Route path='/speak-quran/lesson' element={
+            <ProtectedRoute><SpeakQuranLesson /></ProtectedRoute>
           } />
 
           {/* Circle detail room — unchanged */}

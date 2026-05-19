@@ -58,7 +58,9 @@ router.get('/words', authenticate, async (req, res) => {
         // WITH this
         const tokenRes = await axios.post(
             process.env.QURAN_TOKEN_URL,
-            new URLSearchParams({ grant_type: 'client_credentials' }),
+            new URLSearchParams({
+                grant_type: 'client_credentials', scope: 'content'  // ADD THIS
+            }),
             {
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 auth: {
@@ -84,6 +86,7 @@ router.get('/words', authenticate, async (req, res) => {
                 },
                 headers: {
                     Authorization: `Bearer ${accessToken}`,
+                    'x-auth-token': accessToken,       // CORRECT header name
                     'x-client-id': process.env.QURAN_CLIENT_ID,
                 },
                 timeout: 8000,

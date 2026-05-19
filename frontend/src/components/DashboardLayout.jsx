@@ -3,11 +3,7 @@
 // Shared sidebar + topbar shell wrapping every authenticated page.
 //
 // Changes from previous version:
-//   • nav items are identical; no path changes needed — the router now maps
-//     /circles → MyCircles and /explore, /settings → their new pages.
-//   • NavLink active detection now uses `end` prop on /dashboard so that
-//     child routes like /circle/:id don't keep Dashboard highlighted.
-//   • Everything else — sidebar, mobile overlay, user badge, logout — unchanged.
+//   • Added '📖 Speak Qur'an' nav item after Daily Verse → /speak-quran
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useState }      from 'react';
@@ -15,13 +11,13 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth }       from '@/context/AuthContext';
 
 // ── Navigation items ──────────────────────────────────────────────────────────
-// Paths match exactly what App.jsx defines.
 const navItems = [
-  { to: '/dashboard', label: 'Dashboard',  icon: '⊞', end: true,  badge: null  },
-  { to: '/circles',   label: 'My Circles', icon: '◎', end: false, badge: null  },
-  { to: '/daily',     label: 'Daily Verse', icon: '☽', end: false, badge: 'NEW' },
-  { to: '/explore',   label: 'Explore',    icon: '⊕', end: false, badge: null  },
-  { to: '/settings',  label: 'Settings',   icon: '⊙', end: false, badge: null  },
+  { to: '/dashboard',    label: 'Dashboard',     icon: '⊞', end: true,  badge: null  },
+  { to: '/circles',      label: 'My Circles',    icon: '◎', end: false, badge: null  },
+  { to: '/daily',        label: 'Daily Verse',   icon: '☽', end: false, badge: 'NEW' },
+  { to: '/speak-quran',  label: "Speak Qur'an",  icon: '◈', end: false, badge: null }, // ← ADDED
+  { to: '/explore',      label: 'Explore',       icon: '⊕', end: false, badge: null  },
+  { to: '/settings',     label: 'Settings',      icon: '⊙', end: false, badge: null  },
 ];
 
 // ── Layout ────────────────────────────────────────────────────────────────────
@@ -78,12 +74,13 @@ const DashboardLayout = ({ children }) => {
         </div>
 
         {/* Nav links */}
-        <nav className='flex-1 px-3 py-4 space-y-1'>
+        <nav className='flex-1 px-3 py-4 space-y-1 overflow-y-auto'>
           {navItems.map(({ to, label, icon, end, badge }) => (
             <NavLink
               key={label}
               to={to}
-              end={end}   // prevents /dashboard staying active on /circle/:id etc.
+              end={end}
+              onClick={() => setSidebarOpen(false)}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-all duration-150 ${
                   isActive

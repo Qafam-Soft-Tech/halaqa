@@ -47,7 +47,6 @@ router.get('/login', (req, res) => {
 // ── GET /api/auth/callback ────────────────────────────────────────────────────
 router.get('/callback', async (req, res) => {
   const { code } = req.query;
-  console.log('[Auth Callback] Query params:', req.query);
   try {
     if (!code) throw new Error('No authorization code received');
 

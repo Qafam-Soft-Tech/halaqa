@@ -121,7 +121,7 @@ router.get('/sessions', authenticate, async (req, res) => {
     const access_token = await getUserToken(req.userId);
     const qfRes = await axios.get(
       `${process.env.QURAN_API_BASE}/auth/v1/reading-sessions`,
-        { headers: qfHeaders(access_token), params: { first: 10 }, timeout: 8000 }
+        { headers: qfHeaders(access_token), params: { first: 10 }, timeout: 15000 }
     );
     return res.json(qfRes.data);
   } catch (err) {

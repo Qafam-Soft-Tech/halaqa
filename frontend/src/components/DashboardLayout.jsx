@@ -17,10 +17,11 @@ import { useAuth }       from '@/context/AuthContext';
 // ── Navigation items ──────────────────────────────────────────────────────────
 // Paths match exactly what App.jsx defines.
 const navItems = [
-  { to: '/dashboard', label: 'Dashboard',  icon: '⊞', end: true  },
-  { to: '/circles',   label: 'My Circles', icon: '◎', end: false },
-  { to: '/explore',   label: 'Explore',    icon: '⊕', end: false },
-  { to: '/settings',  label: 'Settings',   icon: '⊙', end: false },
+  { to: '/dashboard', label: 'Dashboard',  icon: '⊞', end: true,  badge: null  },
+  { to: '/circles',   label: 'My Circles', icon: '◎', end: false, badge: null  },
+  { to: '/daily',     label: 'Daily Verse', icon: '☽', end: false, badge: 'NEW' },
+  { to: '/explore',   label: 'Explore',    icon: '⊕', end: false, badge: null  },
+  { to: '/settings',  label: 'Settings',   icon: '⊙', end: false, badge: null  },
 ];
 
 // ── Layout ────────────────────────────────────────────────────────────────────
@@ -78,7 +79,7 @@ const DashboardLayout = ({ children }) => {
 
         {/* Nav links */}
         <nav className='flex-1 px-3 py-4 space-y-1'>
-          {navItems.map(({ to, label, icon, end }) => (
+          {navItems.map(({ to, label, icon, end, badge }) => (
             <NavLink
               key={label}
               to={to}
@@ -92,7 +93,12 @@ const DashboardLayout = ({ children }) => {
               }
             >
               <span className='text-base'>{icon}</span>
-              {label}
+              <span className='flex-1'>{label}</span>
+              {badge && (
+                <span className='text-[10px] font-semibold bg-emerald-900/60 text-emerald-400 border border-emerald-700/50 px-1.5 py-0.5 rounded-full leading-none'>
+                  {badge}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>

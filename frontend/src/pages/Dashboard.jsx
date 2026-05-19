@@ -218,6 +218,14 @@ const Dashboard = () => {
     staleTime: 30_000,
   });
 
+  // Daily verse — reuses cached data from DailyVerse page (same queryKey)
+  const { data: dailyVerse, isLoading: dailyLoading } = useQuery({
+    queryKey:  ['daily-verse'],
+    queryFn:   () => fetch('/api/daily/today').then(r => r.json()).then(r => r.data),
+    staleTime: 60 * 60 * 1000,
+    retry:     false,
+  });
+
   // Activity days for "active minutes" stat
   const { data: activityData } = useQuery({
     queryKey: ['activity-days'],
@@ -280,7 +288,46 @@ const Dashboard = () => {
         </div>
       </motion.div>
 
-      {/* ── 1.5 Continue Reading Banner ───────────────────────────── */}
+      {/* ── 1.5 Today's Verse Teaser Card ────────────────────────── */}
+      {dailyLoading ? (
+        <div className='mb-6 h-36 rounded-2xl bg-stone-800 animate-pulse' />
+      ) : dailyVerse ? (
+        <motion.div
+          className='mb-6 rounded-2xl overflow-hidden relative'
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+        >
+          <img src={dailyVerse.backgroundUrl} alt='' className='absolute inset-0 w-full h-full object-cover' />
+          <div className='absolute inset-0 bg-black/60' />
+          <div className='relative z-10 p-5'>
+            <div className='flex items-start justify-between mb-3'>
+              <span className='bg-emerald-600 text-white text-xs font-semibold px-2.5 py-0.5 rounded-full tracking-wide'>
+                TODAY'S VERSE
+              </span>
+              <div className='text-right'>
+                <p className='text-emerald-300 text-xs font-medium'>{dailyVerse.dates.hijri}</p>
+                <p className='text-white/60 text-xs mt-0.5'>{dailyVerse.dates.gregorian}</p>
+              </div>
+            </div>
+            <p dir='rtl' lang='ar' className='text-white text-xl leading-relaxed mb-1 truncate' style={{ fontFamily: 'Amiri, serif' }}>
+              {dailyVerse.verse.arabic.length > 50 ? dailyVerse.verse.arabic.slice(0, 50) + '…' : dailyVerse.verse.arabic}
+            </p>
+            <p className='text-white/60 text-sm mb-4'>{dailyVerse.verse.surahName} · {dailyVerse.verse.key}</p>
+            <div className='flex items-center justify-between'>
+              <p className='text-white/50 text-xs truncate max-w-[55%]'>Recited by {dailyVerse.reciter.name}</p>
+              <button
+                onClick={() => navigate('/daily')}
+                className='bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold px-4 py-1.5 rounded-full transition-colors shrink-0'
+              >
+                Listen &amp; Reflect →
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      ) : null}
+
+      {/* ── 1.6 Continue Reading Banner ───────────────────────────── */}
       {bannerSession && (
         <ContinueReadingBanner
           session={bannerSession}
@@ -372,7 +419,7 @@ const Dashboard = () => {
                     avatarColor={
                       i % 3 === 0 ? 'bg-emerald-800 text-emerald-300' :
                       i % 3 === 1 ? 'bg-violet-900  text-violet-300'  :
-                                    'bg-amber-900   text-amber-300'
+                                    'bg-stone-700    text-stone-300'
                     }
                     name={circle.name}
                     action='is active in your circles'

@@ -6,6 +6,7 @@
 //   • /explore → Explore    (was: blank — route did not exist)
 //   • /settings → Settings  (was: blank — route did not exist)
 //   • /dashboard → Dashboard (now: stats home page, not the circles list)
+//   • /daily → DailyVerse   (new — public page, no auth required)  ← ADDED
 // Everything else — auth flow, CircleRoom, KhatmPlanner, TafsirSession — is
 // completely unchanged.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -24,6 +25,7 @@ import Profile             from '@/pages/Profile';
 import CircleRoom          from '@/pages/CircleRoom';
 import KhatmPlanner        from '@/pages/KhatmPlanner';
 import TafsirSession       from '@/pages/TafsirSession';
+import DailyVerse          from '@/pages/DailyVerse';  // ← ADDED
 
 const queryClient = new QueryClient();
 
@@ -44,6 +46,9 @@ const App = () => (
           <Route path='/'              element={<Home />} />
           <Route path='/auth/callback' element={<AuthCallback />} />
           <Route path='/auth/error'    element={<AuthError />} />
+
+          {/* Daily Quran Share — public, no login required */}
+          <Route path='/daily'         element={<DailyVerse />} />  {/* ← ADDED */}
 
           {/* ── Protected routes ──────────────────────────────────── */}
 

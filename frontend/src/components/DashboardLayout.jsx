@@ -15,6 +15,9 @@ const navItems = [
   { to: '/daily',       label: 'Daily Verse',   icon: '☽', end: false, badge: 'NEW' },
   { to: '/speak-quran', label: "Speak Qur'an",  icon: '◈', end: false, badge: null  },
   { to: '/tournament',  label: 'Tournament',    icon: '◉', end: false, badge: null  }, // ← ADDED
+  { to: '/notifications', label: 'Notifications',  icon: '⊘', end: false, badge: 'SOON' }, // ← ADDED
+  { to: '/zameel',       label: 'Zameel AI',      icon: '✦', end: false, badge: 'SOON' }, // ← ADDED
+  { to: '/faslu',        label: 'Faslu',           icon: '⊟', end: false, badge: 'SOON' }, // ← ADDED
   { to: '/explore',     label: 'Explore',       icon: '⊕', end: false, badge: null  },
   { to: '/settings',    label: 'Settings',      icon: '⊙', end: false, badge: null  },
 ];

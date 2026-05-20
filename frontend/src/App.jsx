@@ -1,8 +1,15 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // App.jsx
-// Changes from previous version:
-//   • Imports Tournament
-//   • /tournament → Tournament  (new protected route)
+// Root router. Changes from the previous version:
+//   • Imports MyCircles (extracted from old Dashboard) and new Explore, Settings
+//   • /circles → MyCircles  (was: Dashboard)
+//   • /explore → Explore    (was: blank — route did not exist)
+//   • /settings → Settings  (was: blank — route did not exist)
+//   • /dashboard → Dashboard (now: stats home page, not the circles list)
+//   • /daily → DailyVerse   (new — public page, no auth required)
+//   • /speak-quran → SpeakQuran  (new — Speak Qur'an hub)  ← ADDED
+// Everything else — auth flow, CircleRoom, KhatmPlanner, TafsirSession — is
+// completely unchanged.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
@@ -11,8 +18,8 @@ import { AuthProvider }    from '@/context/AuthContext';
 import AuthCallback        from '@/pages/AuthCallback';
 import ProtectedRoute      from '@/components/ProtectedRoute';
 import Home                from '@/pages/Home';
-import Dashboard           from '@/pages/Dashboard';
-import MyCircles           from '@/pages/MyCircles';
+import Dashboard           from '@/pages/Dashboard';   // stats home page
+import MyCircles           from '@/pages/MyCircles';   // circle list
 import Explore             from '@/pages/Explore';
 import Settings            from '@/pages/Settings';
 import Profile             from '@/pages/Profile';
@@ -20,9 +27,12 @@ import CircleRoom          from '@/pages/CircleRoom';
 import KhatmPlanner        from '@/pages/KhatmPlanner';
 import TafsirSession       from '@/pages/TafsirSession';
 import DailyVerse          from '@/pages/DailyVerse';
-import SpeakQuran          from '@/pages/SpeakQuran';
+import SpeakQuran          from '@/pages/SpeakQuran';  // ← ADDED
 import SpeakQuranLesson    from '@/pages/SpeakQuranLesson';
-import Tournament          from '@/pages/Tournament';          // ← ADDED
+import NotificationsVision from '@/pages/NotificationsVision'; // ← ADDED
+import ZameelVision        from '@/pages/ZameelVision';        // ← ADDED
+import FasluVision         from '@/pages/FasluVision';         // ← 
+
 
 const queryClient = new QueryClient();
 
@@ -77,17 +87,22 @@ const App = () => (
           {/* Speak Qur'an — vocabulary learning hub */}
           <Route path='/speak-quran' element={
             <ProtectedRoute><SpeakQuran /></ProtectedRoute>
-          } />
-
+          } />                                                   
           {/* Speak Qur'an — word learning lesson */}
           <Route path='/speak-quran/lesson' element={
             <ProtectedRoute><SpeakQuranLesson /></ProtectedRoute>
           } />
 
-          {/* Tournament — quiz leagues & coin wagering */}
-          <Route path='/tournament' element={
-            <ProtectedRoute><Tournament /></ProtectedRoute>
-          } />                                                  {/* ← ADDED */}
+          {/* Vision pages — Coming Soon features */}
+          <Route path='/notifications' element={
+            <ProtectedRoute><NotificationsVision /></ProtectedRoute>
+          } />
+          <Route path='/zameel' element={
+            <ProtectedRoute><ZameelVision /></ProtectedRoute>
+          } />
+          <Route path='/faslu' element={
+            <ProtectedRoute><FasluVision /></ProtectedRoute>
+          } />
 
           {/* Circle detail room — unchanged */}
           <Route path='/circle/:roomId' element={

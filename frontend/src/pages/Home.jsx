@@ -122,6 +122,83 @@ const Home = () => {
         </div>
       </section>
 
+      {/* ── Coming Soon features ───────────────────────────────────── */}
+      <section className='relative z-10 px-6 md:px-16 pb-28'>
+        <div className='max-w-6xl mx-auto'>
+
+          {/* Divider */}
+          <div className='flex items-center gap-4 mb-10'>
+            <div className='flex-1 h-px bg-stone-800' />
+            <div className='flex items-center gap-2'>
+              <span className='w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse' />
+              <p className='text-amber-500 text-xs font-bold uppercase tracking-[0.2em]'>
+                Coming Soon — In Development
+              </p>
+              <span className='w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse' />
+            </div>
+            <div className='flex-1 h-px bg-stone-800' />
+          </div>
+
+          <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
+
+            {/* Notifications */}
+            <div className='group relative bg-stone-900/60 border border-stone-800 hover:border-amber-800/60 rounded-2xl p-8 transition-all duration-300 hover:-translate-y-1 overflow-hidden'>
+              <div className='absolute top-3 right-3'>
+                <span className='text-[10px] font-bold bg-amber-950/80 text-amber-400 border border-amber-700/50 px-2 py-0.5 rounded-full uppercase tracking-wide'>Soon</span>
+              </div>
+              <div className='text-3xl mb-4'>🔔</div>
+              <h3 className='text-white font-bold text-lg mb-3 group-hover:text-amber-400 transition-colors'>
+                Smart Notifications
+              </h3>
+              <p className='text-stone-500 text-sm leading-relaxed'>
+                Prayer-time-synced reminders across push, email, and WhatsApp. The right nudge,
+                at the right moment — so your circle never misses a session.
+              </p>
+            </div>
+
+            {/* ZAMEEL AI */}
+            <div className='group relative bg-stone-900/60 border border-stone-800 hover:border-amber-800/60 rounded-2xl p-8 transition-all duration-300 hover:-translate-y-1 overflow-hidden'>
+              <div className='absolute top-3 right-3'>
+                <span className='text-[10px] font-bold bg-amber-950/80 text-amber-400 border border-amber-700/50 px-2 py-0.5 rounded-full uppercase tracking-wide'>Soon</span>
+              </div>
+              <div className='text-3xl mb-4'>✦</div>
+              <h3 className='text-white font-bold text-lg mb-3 group-hover:text-amber-400 transition-colors'>
+                ZAMEEL AI — زميل
+              </h3>
+              <p className='text-stone-500 text-sm leading-relaxed'>
+                Your private AI companion. Learns your psychology, identifies your daily distractions,
+                and builds a personalised habit plan — completely private to your account.
+              </p>
+            </div>
+
+            {/* Faslu */}
+            <div className='group relative bg-stone-900/60 border border-stone-800 hover:border-amber-800/60 rounded-2xl p-8 transition-all duration-300 hover:-translate-y-1 overflow-hidden'>
+              <div className='absolute top-3 right-3'>
+                <span className='text-[10px] font-bold bg-amber-950/80 text-amber-400 border border-amber-700/50 px-2 py-0.5 rounded-full uppercase tracking-wide'>Soon</span>
+              </div>
+              <div className='text-3xl mb-4'>🕌</div>
+              <h3 className='text-white font-bold text-lg mb-3 group-hover:text-amber-400 transition-colors'>
+                فصل Faslu — Sacred Classroom
+              </h3>
+              <p className='text-stone-500 text-sm leading-relaxed'>
+                A full online classroom for certified Quranic tutors. Tajweed annotator, Ijazah chain
+                tracking, and Islamic teaching etiquette built into every interaction.
+              </p>
+            </div>
+
+          </div>
+
+          {/* Vision statement */}
+          <div className='mt-10 text-center'>
+            <p className='text-stone-600 text-xs max-w-lg mx-auto leading-relaxed'>
+              Halaqa is more than an app — it is a platform for the global Muslim community
+              to learn, revise, and grow together around the Quran. These features represent
+              the next chapter of that vision.
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* ── Footer ─────────────────────────────────────────────────── */}
       <footer className='relative z-10 border-t border-stone-900 py-8 text-center text-stone-600 text-xs'>
         Halaqa — Group Quran Accountability Circles

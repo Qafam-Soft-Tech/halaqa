@@ -33,7 +33,6 @@ import NotificationsVision from '@/pages/NotificationsVision'; // ← ADDED
 import ZameelVision        from '@/pages/ZameelVision';        // ← ADDED
 import FasluVision         from '@/pages/FasluVision';         // ← 
 import Tournament          from '@/pages/Tournament';          // ← ADDED
-impo
 const queryClient = new QueryClient();
 
 // ── Auth error fallback ───────────────────────────────────────────────────────
@@ -91,6 +90,11 @@ const App = () => (
           {/* Speak Qur'an — word learning lesson */}
           <Route path='/speak-quran/lesson' element={
             <ProtectedRoute><SpeakQuranLesson /></ProtectedRoute>
+          } />
+
+          {/* Tournament */}          {/* ← ADD THIS */}
+          <Route path='/tournament' element={
+            <ProtectedRoute><Tournament /></ProtectedRoute>
           } />
 
           {/* Vision pages — Coming Soon features */}

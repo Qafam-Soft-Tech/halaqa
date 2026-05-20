@@ -179,6 +179,20 @@ const Shimmer = ({ className = '' }) => (
   <div className={`bg-stone-800 animate-pulse rounded ${className}`} />
 );
 
+// ── Daily background gradients — Islamic dark palette, no external images ─────
+const DAILY_GRADIENTS = [
+  'linear-gradient(160deg, #0a1628 0%, #0d2744 45%, #1a3a1a 100%)',
+  'linear-gradient(160deg, #1a0a2e 0%, #2d1b69 50%, #0d3b3b 100%)',
+  'linear-gradient(160deg, #0f2027 0%, #203a43 50%, #2c5364 100%)',
+  'linear-gradient(160deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
+  'linear-gradient(160deg, #0d1117 0%, #0d2744 50%, #1a4a3a 100%)',
+  'linear-gradient(160deg, #1b1b2f 0%, #2c2c54 50%, #1a3a2a 100%)',
+  'linear-gradient(160deg, #0a2342 0%, #0d3b6b 50%, #1a4a3a 100%)',
+  'linear-gradient(160deg, #0f1923 0%, #1a2a4a 50%, #0d3b3b 100%)',
+  'linear-gradient(160deg, #1a0a14 0%, #2d1b2e 50%, #0a2342 100%)',
+  'linear-gradient(160deg, #0a1628 0%, #1a3a2a 50%, #2c5364 100%)',
+];
+
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 const Dashboard = () => {
   const { user }   = useAuth();
@@ -298,8 +312,8 @@ const Dashboard = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
         >
-          <img src={dailyVerse.backgroundUrl} alt='' className='absolute inset-0 w-full h-full object-cover' />
-          <div className='absolute inset-0 bg-black/60' />
+          <div className='absolute inset-0' style={{ background: DAILY_GRADIENTS[dailyVerse.dates.dayOfYear % DAILY_GRADIENTS.length] }} />
+          <div className='absolute inset-0' style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 60%)' }} />
           <div className='relative z-10 p-5'>
             <div className='flex items-start justify-between mb-3'>
               <span className='bg-emerald-600 text-white text-xs font-semibold px-2.5 py-0.5 rounded-full tracking-wide'>

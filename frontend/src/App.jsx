@@ -32,8 +32,8 @@ import SpeakQuranLesson    from '@/pages/SpeakQuranLesson';
 import NotificationsVision from '@/pages/NotificationsVision'; // ← ADDED
 import ZameelVision        from '@/pages/ZameelVision';        // ← ADDED
 import FasluVision         from '@/pages/FasluVision';         // ← 
-
-
+import Tournament          from '@/pages/Tournament';          // ← ADDED
+impo
 const queryClient = new QueryClient();
 
 // ── Auth error fallback ───────────────────────────────────────────────────────

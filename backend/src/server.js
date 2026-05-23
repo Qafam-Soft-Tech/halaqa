@@ -18,6 +18,7 @@ const tournamentRoutes = require('./routes/tournament'); // ← Phase 13B
 
 // Socket
 const { initSocket } = require('./sockets/sessionSocket');
+const pool = require('./db/pool'); 
 
 const app = express();
 const server = http.createServer(app);
@@ -57,10 +58,27 @@ app.get('/', (req, res) => {
   res.json({ service: "Halaqa Backend API", status: "live", version: "1.0.0" });
 });
 
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Halaqa API is running', timestamp: new Date().toISOString() });
+app.get('/health', async (req, res) => {
+  try {
+    await pool.query('SELECT 1');
+    res.status(200).json({
+      status: 'ok',
+      success: true,
+      message: 'Halaqa API is running',
+      db: 'connected',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development'
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: 'error',
+      success: false,
+      message: 'Database unreachable',
+      db: 'disconnected',
+      timestamp: new Date().toISOString()
+    });
+  }
 });
-
 // ── Global Error Handler ──────────────────────────────────────────────────────
 app.use((err, req, res, next) => {
   console.error(`[Error] ${err.message}`);
